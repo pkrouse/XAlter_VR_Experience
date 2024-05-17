@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +19,7 @@ public class WorldControl : MonoBehaviour
     private float t = 0f;
     private float maxScale = 1.0f;
     private float minScale = 0.2f;
+    private bool scaling = false;
 
     private void Awake()
     {
@@ -50,18 +52,38 @@ public class WorldControl : MonoBehaviour
         }
         if (thumbAxis.y > actionThreshold)
         {
-            scale(1);
+            if (scaling) return;
+            StartCoroutine(lerpScale(1));
+            //scale(1);
         }
         else if (thumbAxis.y < -actionThreshold)
         {
-            scale(-1);
+            if (scaling) return;
+            StartCoroutine(lerpScale(-1));
+            //scale(-1);
         }
     }
 
     private void rotate(int multiplier)
     {
-        Debug.Log("ROTATING");
         rotationObject.transform.Rotate(new Vector3(0, rotateDegressPerSecond * multiplier, 0) * Time.deltaTime) ;
+    }
+
+    private IEnumerator lerpScale(int multiplier)
+    {
+        scaling = true;
+        if (multiplier<0) t = 0;
+        if (multiplier>0) t = 1;
+        while ( t>=0 && t<=1.0f )
+        {
+            t = t + (-multiplier * scaleSpeed * Time.deltaTime);
+            float worldScale = Mathf.Lerp(maxScale, minScale, t);
+            scaleObject.transform.localScale = new Vector3(worldScale, worldScale, worldScale);
+            Vector3 position = Vector3.Lerp(newLocation.transform.position, zoomLocation.transform.position, t);
+            viewer.transform.localPosition = position;
+            yield return null;
+        }
+        scaling = false;
     }
 
     private void scale(int multiplier)
@@ -69,7 +91,7 @@ public class WorldControl : MonoBehaviour
         t = t + (-multiplier * scaleSpeed * Time.deltaTime);
         if (t >= 1.0f) return;
         if (t <= 0) return;
-        Debug.Log("T=" + t);
+ 
         float worldScale = Mathf.Lerp(maxScale, minScale, t);
         scaleObject.transform.localScale = new Vector3(worldScale, worldScale, worldScale);
         Vector3 position = Vector3.Lerp(newLocation.transform.position, zoomLocation.transform.position, t);
